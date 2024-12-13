@@ -1,7 +1,7 @@
 package org.autojs.plugin.sdk;
 
 import android.content.Context;
-import android.support.annotation.Keep;
+import androidx.annotation.Keep;
 
 @Keep
 public abstract class Plugin {

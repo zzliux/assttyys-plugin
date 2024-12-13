@@ -1,7 +1,6 @@
-package org.autojs.plugin.sdk.demo;
+package cn.zzliux.assttyys.plugin;
 
 import android.content.Context;
-
 import org.autojs.plugin.sdk.Plugin;
 import org.autojs.plugin.sdk.PluginLoader;
 import org.autojs.plugin.sdk.PluginRegistry;
@@ -12,7 +11,7 @@ public class MyPluginRegistry extends PluginRegistry {
         registerDefaultPlugin(new PluginLoader() {
             @Override
             public Plugin load(Context context, Context selfContext, Object runtime, Object topLevelScope) {
-                return new PluginHelloWorld(context, selfContext, runtime, topLevelScope);
+                return new PluginAssttyys(context, selfContext, runtime, topLevelScope);
             }
         });
     }

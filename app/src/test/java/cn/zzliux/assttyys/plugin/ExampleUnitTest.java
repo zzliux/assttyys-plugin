@@ -1,4 +1,4 @@
-package org.autojs.plugin.sdk.demo;
+package cn.zzliux.assttyys.plugin;
 
 import org.junit.Test;
 

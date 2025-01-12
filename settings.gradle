@@ -1,1 +1,2 @@
-include ':app', ':sdk'
+include ':app', ':sdk', ':opencv'
+project(':opencv').projectDir = new File('D:\\zz\\OpenCV-android-sdk\\sdk')

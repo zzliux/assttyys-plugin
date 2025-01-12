@@ -6,6 +6,10 @@ import org.autojs.plugin.sdk.Plugin;
 public class PluginAssttyys extends Plugin {
     private MlkitOCR mMlkitOCR;
 
+    private OpticalFlow mOpticalFlow;
+
+    private SceneMotion mSceneMotion;
+
     private final Context selfContext;
 
 
@@ -24,5 +28,19 @@ public class PluginAssttyys extends Plugin {
             mMlkitOCR = new MlkitOCR(selfContext);
         }
         return mMlkitOCR;
+    }
+
+    public OpticalFlow getOpticalFlow() {
+        if (mOpticalFlow == null) {
+            mOpticalFlow = new OpticalFlow(selfContext);
+        }
+        return mOpticalFlow;
+    }
+
+    public SceneMotion getSceneMotion() {
+        if (mSceneMotion == null) {
+            mSceneMotion = new SceneMotion(selfContext);
+        }
+        return mSceneMotion;
     }
 }

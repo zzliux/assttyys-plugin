@@ -7,7 +7,6 @@ module.exports = function(plugin){
     function Assttyys() {
     }
     let ocr = plugin.getOCR();
-
     Assttyys.ocr = {
         detect: function detectByOcr (image) {
             let input = image.getBitmap();
@@ -44,6 +43,31 @@ module.exports = function(plugin){
             }));
         }
         return array;
+    }
+
+    // 光流计算场景位移（不好用，算出来的总是错的）
+    let opticalFLow = plugin.getOpticalFlow();
+    Assttyys.OpticalFlow = {
+        detect: function (bitmap1, bitmap2) {
+            return opticalFLow.runDenseOpticalFlowAndGet(bitmap1, bitmap2);
+        }
+    }
+
+    // 场景位移计算（orb+模板匹配）
+    let sceneMontion = plugin.getSceneMotion();
+    Assttyys.SceneMotion = {
+        clearExcludeRegions: function () {
+            sceneMontion.clearExcludeRegions();
+        },
+        addExcludeRegion: function (x1, x2, y1, y2) {
+            sceneMontion.addExcludeRegion(new android.graphics.Rect(x1, x2, y1, y2));
+        },
+        setInitialFrame: function (bitmap) {
+            sceneMontion.setInitialFrame(bitmap);
+        },
+        detect: function (bitmap) {
+            return sceneMontion.calculateMotion(bitmap);
+        }
     }
 
     return Assttyys;

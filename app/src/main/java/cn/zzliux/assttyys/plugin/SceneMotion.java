@@ -29,6 +29,8 @@ public class SceneMotion {
 
     Mat descriptors2;
 
+    private Mat excludeMask;  // 添加掩码成员变量
+
     static {
         System.loadLibrary("opencv_java4");
     }
@@ -45,6 +47,7 @@ public class SceneMotion {
      */
     public void addExcludeRegion(Rect rect) {
         excludeRegions.add(rect);
+        updateExcludeMask(lastFrame != null ? lastFrame.size() : new Size(0, 0));
     }
 
     /**
@@ -52,6 +55,31 @@ public class SceneMotion {
      */
     public void clearExcludeRegions() {
         excludeRegions.clear();
+        if (excludeMask != null) {
+            excludeMask.release();
+            excludeMask = null;
+        }
+    }
+
+    private void updateExcludeMask(Size size) {
+        if (size.width == 0 || size.height == 0) {
+            return;
+        }
+        
+        if (excludeMask != null) {
+            excludeMask.release();
+        }
+        
+        // 创建全白色掩码（255表示有效区域）
+        excludeMask = new Mat(size, CvType.CV_8UC1, new Scalar(255));
+        
+        // 在排除区域绘制黑色（0表示排除区域）
+        for (Rect region : excludeRegions) {
+            // 使用两个Point来定义矩形的左上角和右下角
+            Point pt1 = new Point(region.left, region.top);
+            Point pt2 = new Point(region.right, region.bottom);
+            Imgproc.rectangle(excludeMask, pt1, pt2, new Scalar(0), -1);
+        }
     }
 
     /**
@@ -66,6 +94,9 @@ public class SceneMotion {
         lastFrame = new Mat();
         Utils.bitmapToMat(bitmap, lastFrame);
         
+        // 更新掩码大小
+        updateExcludeMask(lastFrame.size());
+        
         // 计算并缓存特征点和描述子
         Mat gray = new Mat();
         Imgproc.cvtColor(lastFrame, gray, Imgproc.COLOR_BGR2GRAY);
@@ -76,13 +107,13 @@ public class SceneMotion {
             
             // 检测特征点
             FastFeatureDetector detector = FastFeatureDetector.create();
-            detector.setThreshold(15);
+            detector.setThreshold(20);
             detector.setNonmaxSuppression(true);
             
             List<KeyPoint> kp1List = new ArrayList<>();
             
-            // 在原图
-            detector.detect(gray, lastKeypoints);
+            // 使用掩码检测特征点
+            detector.detect(gray, lastKeypoints, excludeMask);
             kp1List.addAll(lastKeypoints.toList());
             
             // 创建放大图并检测特征点
@@ -178,7 +209,8 @@ public class SceneMotion {
             keypoints2 = new MatOfKeyPoint();
             List<KeyPoint> kp2List = new ArrayList<>();
 
-            detector.detect(gray2, keypoints2);
+            // 使用掩码检测特征点
+            detector.detect(gray2, keypoints2, excludeMask);
             kp2List.addAll(keypoints2.toList());
 
             // 在放大图上检测特征点
@@ -236,11 +268,8 @@ public class SceneMotion {
             KeyPoint[] keypoints2Array = keypoints2.toArray();
 
             for (DMatch match : matchesList) {
-                Point pt1 = keypoints1Array[match.queryIdx].pt;
-                if (!isPointInExcludeRegions(pt1)) {
-                    points1.add(pt1);
-                    points2.add(keypoints2Array[match.trainIdx].pt);
-                }
+                points1.add(keypoints1Array[match.queryIdx].pt);
+                points2.add(keypoints2Array[match.trainIdx].pt);
             }
 
             // 6. 使用RANSAC估计位移
@@ -279,15 +308,6 @@ public class SceneMotion {
         }
     }
 
-    private boolean isPointInExcludeRegions(Point pt) {
-        for (Rect region : excludeRegions) {
-            if (region.contains((int) pt.x, (int) pt.y)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     private boolean isValidMotion(double dx, double dy, double angle) {
         // 检查运动是否在合理范围内
         double maxMotion = 100; // 最大允许位移
@@ -297,5 +317,9 @@ public class SceneMotion {
 
     public void release() {
         releaseLastFrameData();
+        if (excludeMask != null) {
+            excludeMask.release();
+            excludeMask = null;
+        }
     }
 }

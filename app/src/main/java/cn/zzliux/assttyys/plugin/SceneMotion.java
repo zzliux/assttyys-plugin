@@ -1,6 +1,5 @@
 package cn.zzliux.assttyys.plugin;
 
-import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Rect;
 import org.opencv.android.Utils;
@@ -15,12 +14,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class SceneMotion {
-    private Context mContext;
     private static final int MIN_MATCHES = 6;  // 降低最小匹配点要求
     private static final double RANSAC_THRESHOLD = 5.0;  // 适当放宽RANSAC阈值
     private static final float RATIO_THRESH = 0.75f;  // 距离比率阈值
 
-    private List<Rect> excludeRegions; // 排除区域列表
+    private final List<Rect> excludeRegions; // 排除区域列表
     private Mat lastFrame;  // 添加缓存上一帧的Mat对象
     private MatOfKeyPoint lastKeypoints;  // 缓存上一帧的特征点
     private Mat lastDescriptors;  // 缓存上一帧的描述子
@@ -35,8 +33,7 @@ public class SceneMotion {
         System.loadLibrary("opencv_java4");
     }
 
-    public SceneMotion(Context context) {
-        this.mContext = context;
+    public SceneMotion() {
         this.excludeRegions = new ArrayList<>();
     }
 
@@ -65,14 +62,14 @@ public class SceneMotion {
         if (size.width == 0 || size.height == 0) {
             return;
         }
-        
+
         if (excludeMask != null) {
             excludeMask.release();
         }
-        
+
         // 创建全白色掩码（255表示有效区域）
         excludeMask = new Mat(size, CvType.CV_8UC1, new Scalar(255));
-        
+
         // 在排除区域绘制黑色（0表示排除区域）
         for (Rect region : excludeRegions) {
             // 使用两个Point来定义矩形的左上角和右下角
@@ -84,44 +81,43 @@ public class SceneMotion {
 
     /**
      * 设置初始帧
+     *
      * @param bitmap 初始帧图片
      */
     public void setInitialFrame(Bitmap bitmap) {
         if (lastFrame != null) {
             releaseLastFrameData();
         }
-        
+
         lastFrame = new Mat();
         Utils.bitmapToMat(bitmap, lastFrame);
-        
+
         // 更新掩码大小
         updateExcludeMask(lastFrame.size());
-        
+
         // 计算并缓存特征点和描述子
         Mat gray = new Mat();
         Imgproc.cvtColor(lastFrame, gray, Imgproc.COLOR_BGR2GRAY);
-        
+
         try {
             lastKeypoints = new MatOfKeyPoint();
             lastDescriptors = new Mat();
-            
+
             // 检测特征点
             FastFeatureDetector detector = FastFeatureDetector.create();
             detector.setThreshold(20);
             detector.setNonmaxSuppression(true);
-            
-            List<KeyPoint> kp1List = new ArrayList<>();
-            
+
             // 使用掩码检测特征点
             detector.detect(gray, lastKeypoints, excludeMask);
-            kp1List.addAll(lastKeypoints.toList());
-            
+            List<KeyPoint> kp1List = new ArrayList<>(lastKeypoints.toList());
+
             // 创建放大图并检测特征点
 //            Mat grayScaled = new Mat();
 //            Imgproc.resize(gray, grayScaled, new Size(), 1.5, 1.5, Imgproc.INTER_LINEAR);
 //            MatOfKeyPoint keypointsScaled = new MatOfKeyPoint();
 //            detector.detect(grayScaled, keypointsScaled);
-            
+
             // 调整放大图上的特征点坐标
 //            List<KeyPoint> scaledKp = keypointsScaled.toList();
 //            for (KeyPoint kp : scaledKp) {
@@ -129,15 +125,15 @@ public class SceneMotion {
 //                kp.pt.y /= 1.5;
 //                kp1List.add(kp);
 //            }
-            
+
             lastKeypoints.fromList(kp1List);
-            
+
             // 计算描述子
             ORB orb = ORB.create();
             orb.setWTA_K(3);
             orb.setEdgeThreshold(31);
             orb.compute(gray, lastKeypoints, lastDescriptors);
-            
+
 //            grayScaled.release();
 //            keypointsScaled.release();
         } finally {
@@ -162,6 +158,7 @@ public class SceneMotion {
 
     /**
      * 计算当前帧与上一帧之间的位移
+     *
      * @param currentBitmap 当前帧图片
      * @return Double[]{angle, dx, dy} 角度和位移，匹配失败时返回null
      */
@@ -180,13 +177,13 @@ public class SceneMotion {
                 // 更新lastFrame
                 releaseLastFrameData();
                 lastFrame = currentFrame.clone();
-                
+
                 // 直接从calculateSceneMotion中获取新计算的特征点和描述子
                 // 需要修改calculateSceneMotion方法，让它返回这些信息
                 // 或者将keypoints2和descriptors2设为类成员变量
                 lastKeypoints = keypoints2;  // 需要从calculateSceneMotion中获取
                 lastDescriptors = descriptors2;  // 需要从calculateSceneMotion中获取
-                
+
                 return result;
             }
             return null;
@@ -207,11 +204,10 @@ public class SceneMotion {
             detector.setNonmaxSuppression(true);
 
             keypoints2 = new MatOfKeyPoint();
-            List<KeyPoint> kp2List = new ArrayList<>();
 
             // 使用掩码检测特征点
             detector.detect(gray2, keypoints2, excludeMask);
-            kp2List.addAll(keypoints2.toList());
+            List<KeyPoint> kp2List = new ArrayList<>(keypoints2.toList());
 
             // 在放大图上检测特征点
 //            Mat img2Scaled = new Mat();
@@ -236,8 +232,8 @@ public class SceneMotion {
             orb.compute(gray2, keypoints2, descriptors2);
 
             // 4. 特征点匹配（使用缓存的上一帧特征点和描述子）
-            if (lastDescriptors == null || descriptors2 == null || 
-                lastDescriptors.empty() || descriptors2.empty()) {
+            if (lastDescriptors == null || descriptors2 == null ||
+                    lastDescriptors.empty() || descriptors2.empty()) {
                 return null;
             }
 
@@ -285,7 +281,7 @@ public class SceneMotion {
             Mat mask = new Mat();
             Mat H = Calib3d.findHomography(pts1, pts2, Calib3d.RANSAC, RANSAC_THRESHOLD, mask);
 
-            if (H == null || H.empty()) {
+            if (H.empty()) {
                 return null;
             }
 
@@ -300,7 +296,7 @@ public class SceneMotion {
                 dy = 0;
             }
 
-            return isValidMotion(dx, dy, angle) ?
+            return isValidMotion(dx, dy) ?
                     new Double[]{angle, dx, dy} : null;
 
         } finally {
@@ -308,7 +304,7 @@ public class SceneMotion {
         }
     }
 
-    private boolean isValidMotion(double dx, double dy, double angle) {
+    private boolean isValidMotion(double dx, double dy) {
         // 检查运动是否在合理范围内
         double maxMotion = 100; // 最大允许位移
         return Math.abs(dx) <= maxMotion &&

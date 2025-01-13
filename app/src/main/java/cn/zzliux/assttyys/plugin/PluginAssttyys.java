@@ -39,7 +39,7 @@ public class PluginAssttyys extends Plugin {
 
     public SceneMotion getSceneMotion() {
         if (mSceneMotion == null) {
-            mSceneMotion = new SceneMotion(selfContext);
+            mSceneMotion = new SceneMotion();
         }
         return mSceneMotion;
     }
